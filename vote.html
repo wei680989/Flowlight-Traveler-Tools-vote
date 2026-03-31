@@ -17,11 +17,14 @@
         }
 
         input {
-            padding: 10px;
+            padding: 12px;
             border-radius: 5px;
-            width: 80%;
+            width: 85%;
             margin-bottom: 20px;
             font-size: 16px;
+            border: 1px solid #34495e;
+            background: #1c2636;
+            color: white;
         }
 
         .btn {
@@ -33,26 +36,44 @@
             border: none;
             cursor: pointer;
             font-weight: bold;
+            color: white;
+            transition: 0.2s;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
         }
 
         #status {
             color: #f1c40f;
             font-size: 14px;
-            margin-top: 10px;
+            margin-top: 15px;
+            min-height: 20px;
+        }
+
+        #timer {
+            font-size: 20px;
+            color: #e74c3c;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 15px;
         }
     </style>
 </head>
 
 <body>
     <h2>🏆 冠軍隊伍預測</h2>
-    <input type="text" id="playerID" placeholder="請輸入遊戲 ID (必填)">
-
-    <div id="voteArea">
-        <button class="btn" style="background:#2ecc71" onclick="submitVote('A')">預測 A 隊贏</button>
-        <button class="btn" style="background:#3498db" onclick="submitVote('B')">預測 B 隊贏</button>
-        <button class="btn" style="background:#e74c3c" onclick="submitVote('C')">預測 C 隊贏</button>
+    <div class="card">
+        <div id="timer"></div>
+        <input type="text" id="playerID" placeholder="請輸入遊戲內 ID (必填)">
+        <div id="voteArea">載入中...</div>
+        <div id="status"></div>
     </div>
-    <div id="status"></div>
 
     <script>
         const firebaseConfig = {
@@ -68,22 +89,56 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // 檢查投票是否開啟
-        db.ref('settings/voteActive').on('value', (s) => {
-            if (!s.val()) {
-                document.getElementById('voteArea').innerHTML = "<h3>目前非投票時間</h3>";
+        let voteActive = false;
+        let startTime = 0;
+        const duration = 600; // 10分鐘
+
+        // 監聽投票狀態
+        db.ref('settings').on('value', (s) => {
+            const data = s.val();
+            if (data) {
+                voteActive = data.voteActive;
+                startTime = data.startTime;
+                updateUI();
             }
         });
+
+        function updateUI() {
+            const area = document.getElementById('voteArea');
+            if (!voteActive) {
+                area.innerHTML = "<h3 style='color: #95a5a6;'>🛑 目前非投票時間</h3>";
+                document.getElementById('timer').innerText = "";
+            } else {
+                area.innerHTML = `
+                    <button class="btn" style="background:#2ecc71" onclick="submitVote('A')">預測 A 隊贏</button>
+                    <button class="btn" style="background:#3498db" onclick="submitVote('B')">預測 B 隊贏</button>
+                    <button class="btn" style="background:#e74c3c" onclick="submitVote('C')">預測 C 隊贏</button>
+                `;
+            }
+        }
+
+        // 每秒更新倒數計時
+        setInterval(() => {
+            if (voteActive && startTime > 0) {
+                let diff = Math.floor((Date.now() - startTime) / 1000);
+                let remain = duration - diff;
+                if (remain <= 0) {
+                    document.getElementById('timer').innerText = "投票已結束";
+                } else {
+                    let m = Math.floor(remain / 60);
+                    let s = remain % 60;
+                    document.getElementById('timer').innerText = `⏳ 預測截止倒數: ${m}分${s}秒`;
+                }
+            }
+        }, 1000);
 
         function submitVote(team) {
             const id = document.getElementById('playerID').value.trim();
             if (!id) { alert("請輸入遊戲 ID 才能投票！"); return; }
 
-            // 使用 ID 作為 Key，會自動覆蓋舊投票（達成自由更改）
-            db.ref('votes/' + id).set(team)
-                .then(() => {
-                    document.getElementById('status').innerText = `已成功將預測更改為: ${team} 隊`;
-                });
+            db.ref('votes/' + id).set(team).then(() => {
+                document.getElementById('status').innerText = `✅ 已成功預測: ${team} 隊 (可重複修改)`;
+            });
         }
     </script>
 </body>
