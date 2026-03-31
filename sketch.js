@@ -1,8 +1,17 @@
 /**
- * 【流光旅人】水晶衝突自訂賽看板 V22 - 完整修復版
+ * 【流光旅人】水晶衝突自訂賽看板 V22.1 - 結構修復版
  */
 
-// --- 遊戲核心變數 ---
+// --- 1. 先定義工具函數 (確保 setup 抓得到) ---
+function customShuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// --- 2. 遊戲核心變數 ---
 let playerNames = ["突擊兔邦妮", "Neil", "哈密瓜牛奶", "Soph1a", "西瓜牛奶", "鑢七椋", "奈莎", "吼哩拎醉", "一包黑芝麻", "戰鎖鎖不住", "無糖珍珠奶茶", "Usachi", "本", "楓紅", "武破子"];
 let shuffledList = [];
 let teams = [[], [], []];
@@ -16,7 +25,7 @@ let matches = [
   { t1: 0, t2: 1, winner: -1, score: "" }, { t1: 1, t2: 2, winner: -1, score: "" }, { t1: 2, t2: 0, winner: -1, score: "" }
 ];
 
-// --- Firebase 設定 ---
+// --- Firebase 配置 ---
 const firebaseConfig = {
   apiKey: "AIzaSyA_pq1Z2JRmFNxfz5aTTGMPGUIwtWExOJ8",
   authDomain: "ff14-pvp-poll.firebaseapp.com",
@@ -39,9 +48,10 @@ let finalWinnerIdx = -1;
 let activeInput = { type: null, index: -1 };
 let warningFlash = 0;
 
+// --- 3. p5.js 核心 ---
 function setup() {
   createCanvas(1000, 950);
-  shuffledList = customShuffle([...playerNames]);
+  shuffledList = customShuffle([...playerNames]); // 現在絕對抓得到了
   rectMode(CENTER);
 
   if (typeof firebase !== 'undefined') {
@@ -95,7 +105,7 @@ function draw() {
   }
 }
 
-// --- 繪圖組件 ---
+// --- 4. 繪圖與邏輯組件 (請務必全部複製) ---
 function drawPool(name, members, x, y, clr, score) {
   fill(clr); rect(x, y, 220, 45, 8); fill(0, 100); rect(x + 75, y, 55, 30, 5);
   fill(255); textAlign(LEFT, CENTER); textSize(18); textStyle(BOLD); text(name, x - 100, y);
@@ -158,12 +168,12 @@ function drawLivePoll(x, y) {
   let currentTime = Date.now();
   let remaining = 0;
   if (voteActive && voteStartTime > 0) {
-    remaining = max(0, voteDuration - floor((currentTime - voteStartTime) / 1000));
+    remaining = Math.max(0, voteDuration - Math.floor((currentTime - voteStartTime) / 1000));
     if (remaining <= 0 && voteActive) { db.ref('settings/voteActive').set(false); }
   }
   textSize(13);
   if (remaining > 0) {
-    fill("#f1c40f"); text(`⏳ 剩餘: ${floor(remaining / 60)}分${remaining % 60}秒`, x - 120, y - 20);
+    fill("#f1c40f"); text(`⏳ 剩餘: ${Math.floor(remaining / 60)}分${remaining % 60}秒`, x - 120, y - 20);
   } else {
     fill(150); text(voteStartTime > 0 ? "🛑 預測已截止" : "🕒 抽選結束後開啟", x - 120, y - 20);
   }
@@ -197,7 +207,7 @@ function drawRollingOverlay() {
   fill(0, 230); rect(width / 2, height / 2, width, height);
   fill(255); textSize(40); textStyle(BOLD); textAlign(CENTER); text("名單抽選中...", width / 2, height / 2 - 40);
   fill("#e67e22"); textSize(70); text(rollingName, width / 2, height / 2 + 40);
-  if (frameCount % 2 === 0) rollingName = playerNames[floor(random(playerNames.length))];
+  if (frameCount % 2 === 0) rollingName = playerNames[Math.floor(Math.random() * playerNames.length)];
   timer++;
   if (timer > 35) {
     isRolling = false; timer = 0;
@@ -234,7 +244,6 @@ function drawRankBox(x, y, rank, tName, tIdx, clr, prize, isWinner) {
   fill(200); textSize(14); text(teams[tIdx].join(" 、 "), x, y - (isWinner ? 75 : 30), isWinner ? 500 : 360, 50);
 }
 
-// --- 邏輯函數 ---
 function setWinner(mIdx, tIdx) {
   if (matches[mIdx].score.trim() === "") { warningFlash = 255; return; }
   matches[mIdx].winner = tIdx;
@@ -303,5 +312,4 @@ function drawVirtualBtn(x, y, w, h, label, isActive, enabled) {
   rect(x, y, w, h, 8); fill(isActive ? 0 : 255); textAlign(CENTER, CENTER); textSize(16); text(label, x, y);
 }
 
-function customShuffle(a) { for (let i = a.length - 1; i > 0; i--) { let j = floor(random(i + 1));[a[i], a[j]] = [a[j], a[i]]; } return a; }
 function drawStartButton() { drawVirtualBtn(width / 2, height / 2, 200, 80, "🎲 開始抽人", false, true); }
