@@ -103,13 +103,8 @@
             <div id="status" style="margin-top:10px; color:#2ecc71; font-weight:bold;"></div>
         </div>
 
-        <div class="team-box">
-            <h4 style="color:#2ecc71">🟢 隊伍 A 成員</h4>
-            <div class="team-list">Usachi、戰鎖鎖不住、楓紅、一包黑芝麻、無糖珍珠奶茶</div>
-            <h4 style="color:#3498db">🔵 隊伍 B 成員</h4>
-            <div class="team-list">突擊兔邦妮、哈密瓜牛奶、武破子、Soph1a、Neil</div>
-            <h4 style="color:#e74c3c">🔴 隊伍 C 成員</h4>
-            <div class="team-list">本、西瓜牛奶、奈莎、鑢七椋、吼哩拎醉</div>
+        <div class="team-box" id="teamDisplay">
+            <p style="color:#95a5a6; text-align:center;">⌛ 抽籤尚未開始，請稍候...</p>
         </div>
     </div>
 
@@ -130,6 +125,7 @@
         let voteActive = false;
         let startTime = 0;
 
+        // 監聽投票狀態
         db.ref('settings').on('value', (s) => {
             const data = s.val();
             if (data) {
@@ -139,10 +135,26 @@
             }
         });
 
+        // 動態監聽隊伍成員
+        db.ref('currentTeams').on('value', (s) => {
+            const t = s.val();
+            const display = document.getElementById('teamDisplay');
+            if (t) {
+                display.innerHTML = `
+                    <h4 style="color:#2ecc71">🟢 隊伍 A 成員</h4>
+                    <div class="team-list">${t.A.join('、')}</div>
+                    <h4 style="color:#3498db">🔵 隊伍 B 成員</h4>
+                    <div class="team-list">${t.B.join('、')}</div>
+                    <h4 style="color:#e74c3c">🔴 隊伍 C 成員</h4>
+                    <div class="team-list">${t.C.join('、')}</div>
+                `;
+            }
+        });
+
         function updateUI() {
             const area = document.getElementById('voteArea');
             if (!voteActive) {
-                area.innerHTML = "<h3 style='color: #95a5a6;'>🛑 抽選尚未結束，請稍候</h3>";
+                area.innerHTML = "<h3 style='color: #95a5a6;'>🛑 抽選進行中，預測尚未開啟</h3>";
                 document.getElementById('timer').innerText = "等待系統開啟...";
             } else {
                 area.innerHTML = `
@@ -163,9 +175,9 @@
 
         function submitVote(team) {
             const id = document.getElementById('playerID').value.trim();
-            if (!id) { alert("請輸入 ID！"); return; }
+            if (!id) { alert("請輸入遊戲 ID！"); return; }
             db.ref('votes/' + id).set(team).then(() => {
-                document.getElementById('status').innerText = `✅ 已更新預測: ${team} 隊！`;
+                document.getElementById('status').innerText = `✅ 預測更新成功: ${team} 隊！`;
             });
         }
     </script>
