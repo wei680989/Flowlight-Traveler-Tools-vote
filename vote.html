@@ -13,14 +13,19 @@
             color: white;
             text-align: center;
             font-family: sans-serif;
-            padding: 20px;
+            padding: 15px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: auto;
         }
 
         input {
             padding: 12px;
             border-radius: 5px;
-            width: 85%;
-            margin-bottom: 20px;
+            width: 90%;
+            margin-bottom: 15px;
             font-size: 16px;
             border: 1px solid #34495e;
             background: #1c2636;
@@ -29,50 +34,83 @@
 
         .btn {
             width: 100%;
-            padding: 15px;
-            margin: 10px 0;
+            padding: 14px;
+            margin: 8px 0;
             font-size: 18px;
             border-radius: 10px;
             border: none;
             cursor: pointer;
             font-weight: bold;
             color: white;
-            transition: 0.2s;
-        }
-
-        .btn:active {
-            transform: scale(0.98);
-        }
-
-        #status {
-            color: #f1c40f;
-            font-size: 14px;
-            margin-top: 15px;
-            min-height: 20px;
         }
 
         #timer {
-            font-size: 20px;
-            color: #e74c3c;
-            font-weight: bold;
+            font-size: 18px;
+            color: #f1c40f;
             margin: 10px 0;
+            font-weight: bold;
         }
 
-        .card {
+        .reward-info {
+            background: rgba(241, 196, 15, 0.1);
+            border: 1px solid #f1c40f;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #f39c12;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .team-box {
             background: rgba(255, 255, 255, 0.05);
-            padding: 20px;
+            padding: 15px;
             border-radius: 15px;
+            margin-top: 15px;
+            text-align: left;
+        }
+
+        .team-list {
+            font-size: 13px;
+            color: #bdc3c7;
+            margin-bottom: 10px;
+            border-left: 3px solid #3498db;
+            padding-left: 10px;
+        }
+
+        h4 {
+            margin: 5px 0;
+            color: #fff;
+            font-size: 15px;
         }
     </style>
 </head>
 
 <body>
-    <h2>🏆 冠軍隊伍預測</h2>
-    <div class="card">
-        <div id="timer"></div>
-        <input type="text" id="playerID" placeholder="請輸入您的遊戲 ID">
-        <div id="voteArea">載入中...</div>
-        <div id="status"></div>
+    <div class="container">
+        <h2>🏆 賽事冠軍預測</h2>
+
+        <div class="reward-info">
+            ✨ <b>預測成功獎勵</b> ✨<br>
+            預測成功隊伍的玩家中，將使用 Google 輪盤<br>
+            隨機抽出一位幸運兒，獲得 <b>150 水晶任意商城獎品</b>！
+        </div>
+
+        <div class="team-box">
+            <div id="timer">載入中...</div>
+            <input type="text" id="playerID" placeholder="請輸入您的遊戲 ID">
+            <div id="voteArea"></div>
+            <div id="status" style="margin-top:10px; color:#2ecc71; font-weight:bold;"></div>
+        </div>
+
+        <div class="team-box">
+            <h4 style="color:#2ecc71">🟢 隊伍 A 成員</h4>
+            <div class="team-list">Usachi、戰鎖鎖不住、楓紅、一包黑芝麻、無糖珍珠奶茶</div>
+            <h4 style="color:#3498db">🔵 隊伍 B 成員</h4>
+            <div class="team-list">突擊兔邦妮、哈密瓜牛奶、武破子、Soph1a、Neil</div>
+            <h4 style="color:#e74c3c">🔴 隊伍 C 成員</h4>
+            <div class="team-list">本、西瓜牛奶、奈莎、鑢七椋、吼哩拎醉</div>
+        </div>
     </div>
 
     <script>
@@ -91,7 +129,6 @@
 
         let voteActive = false;
         let startTime = 0;
-        const duration = 600;
 
         db.ref('settings').on('value', (s) => {
             const data = s.val();
@@ -105,38 +142,30 @@
         function updateUI() {
             const area = document.getElementById('voteArea');
             if (!voteActive) {
-                area.innerHTML = "<h3 style='color: #95a5a6;'>🛑 目前非投票時間</h3>";
-                document.getElementById('timer').innerText = "";
+                area.innerHTML = "<h3 style='color: #95a5a6;'>🛑 抽選尚未結束，請稍候</h3>";
+                document.getElementById('timer').innerText = "等待系統開啟...";
             } else {
                 area.innerHTML = `
-                    <button class="btn" style="background:#2ecc71" onclick="submitVote('A')">預測 A 隊贏</button>
-                    <button class="btn" style="background:#3498db" onclick="submitVote('B')">預測 B 隊贏</button>
-                    <button class="btn" style="background:#e74c3c" onclick="submitVote('C')">預測 C 隊贏</button>
+                    <button class="btn" style="background:#2ecc71" onclick="submitVote('A')">預測 A 隊奪冠</button>
+                    <button class="btn" style="background:#3498db" onclick="submitVote('B')">預測 B 隊奪冠</button>
+                    <button class="btn" style="background:#e74c3c" onclick="submitVote('C')">預測 C 隊奪冠</button>
                 `;
             }
         }
 
         setInterval(() => {
             if (voteActive && startTime > 0) {
-                let diff = Math.floor((Date.now() - startTime) / 1000);
-                let remain = duration - diff;
-                if (remain <= 0) {
-                    document.getElementById('timer').innerText = "投票已結束";
-                } else {
-                    let m = Math.floor(remain / 60);
-                    let s = remain % 60;
-                    document.getElementById('timer').innerText = `⏳ 預測截止倒數: ${m}分${s}秒`;
-                }
+                let remain = 600 - Math.floor((Date.now() - startTime) / 1000);
+                if (remain <= 0) document.getElementById('timer').innerText = "🛑 預測截止";
+                else document.getElementById('timer').innerText = `⏳ 截止倒數: ${Math.floor(remain / 60)}分${remain % 60}秒`;
             }
         }, 1000);
 
         function submitVote(team) {
             const id = document.getElementById('playerID').value.trim();
-            if (!id) { alert("請輸入遊戲 ID 才能投票！"); return; }
-
-            // 使用 .set 會自動覆蓋同 ID 的舊數據
+            if (!id) { alert("請輸入 ID！"); return; }
             db.ref('votes/' + id).set(team).then(() => {
-                document.getElementById('status').innerText = `✅ 已更新預測: ${team} 隊 (成功覆蓋)`;
+                document.getElementById('status').innerText = `✅ 已更新預測: ${team} 隊！`;
             });
         }
     </script>

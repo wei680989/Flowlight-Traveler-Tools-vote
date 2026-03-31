@@ -1,8 +1,8 @@
 /**
- * 【流光旅人】水晶衝突自訂賽看板 V23 - 管理監控版
+ * 【流光旅人】水晶衝突看板 V23.5 - UI 佈局修正版
  */
 
-// --- 1. 工具函數 ---
+// --- 工具函數 ---
 function customShuffle(a) {
   for (let i = a.length - 1; i > 0; i--) {
     let j = Math.floor(Math.random() * (i + 1));
@@ -11,20 +11,18 @@ function customShuffle(a) {
   return a;
 }
 
-// --- 2. 變數設定 ---
+// --- 變數設定 ---
 let playerNames = ["突擊兔邦妮", "Neil", "哈密瓜牛奶", "Soph1a", "西瓜牛奶", "鑢七椋", "奈莎", "吼哩拎醉", "一包黑芝麻", "戰鎖鎖不住", "無糖珍珠奶茶", "Usachi", "本", "楓紅", "武破子"];
 let shuffledList = [];
 let teams = [[], [], []];
 let currentIndex = 0;
-let isRolling = false, rollingName = "", timer = 0;
-let gamePhase = 0;
+let isRolling = false, rollingName = "", timer = 0, gamePhase = 0;
 let teamScores = [0, 0, 0];
 let matches = [
   { t1: 0, t2: 1, winner: -1, score: "" }, { t1: 1, t2: 2, winner: -1, score: "" }, { t1: 2, t2: 0, winner: -1, score: "" },
   { t1: 0, t2: 1, winner: -1, score: "" }, { t1: 1, t2: 2, winner: -1, score: "" }, { t1: 2, t2: 0, winner: -1, score: "" }
 ];
 
-// --- Firebase 與 監控變數 ---
 const firebaseConfig = {
   apiKey: "AIzaSyA_pq1Z2JRmFNxfz5aTTGMPGUIwtWExOJ8",
   authDomain: "ff14-pvp-poll.firebaseapp.com",
@@ -38,8 +36,8 @@ const firebaseConfig = {
 
 let db, voteCounts = { A: 0, B: 0, C: 0, total: 0 };
 let voteStartTime = 0, voteDuration = 600, voteActive = false;
-let allVotes = [];      // 儲存明細
-let showVoteList = false; // 是否顯示明細列表
+let allVotes = [];
+let showVoteList = false;
 let finalTeams = [0, 1], finalMatches = [{ winner: -1, score: "" }, { winner: -1, score: "" }, { winner: -1, score: "" }];
 let finalWinnerIdx = -1, activeInput = { type: null, index: -1 }, warningFlash = 0;
 
@@ -88,7 +86,7 @@ function draw() {
   drawLivePoll(820, 680);
   drawPrizePanel(820, 845);
 
-  if (showVoteList) drawVoteDetailOverlay(); // 畫出明細浮層
+  if (showVoteList) drawVoteDetailOverlay();
   if (gamePhase === 3) drawVictoryScreen();
   if (isRolling) drawRollingOverlay();
   if (gamePhase === 0 && !isRolling) drawStartButton();
@@ -101,7 +99,61 @@ function draw() {
   }
 }
 
-// --- 繪圖組件 ---
+// --- UI 組件 ---
+function drawLivePoll(x, y) {
+  fill(255, 5); rect(x, y, 280, 140, 15);
+  fill(255); textAlign(LEFT, CENTER); textSize(18); textStyle(BOLD); text("📊 預測比例", x - 120, y - 45);
+
+  // 縮小查看按鈕，避免擠壓
+  drawVirtualBtn(x + 100, y - 45, 50, 25, "查看", showVoteList, true);
+
+  let remain = 0;
+  if (voteActive && voteStartTime > 0) {
+    remain = Math.max(0, voteDuration - Math.floor((Date.now() - voteStartTime) / 1000));
+    if (remain <= 0) db.ref('settings/voteActive').set(false);
+  }
+
+  // 修正時間文字位置
+  textSize(13); fill(remain > 0 ? "#f1c40f" : 150); textStyle(NORMAL);
+  textAlign(LEFT, CENTER);
+  text(remain > 0 ? `⏳ 剩餘: ${Math.floor(remain / 60)}分${remain % 60}秒` : "🛑 預測已截止", x - 120, y - 20);
+
+  drawVoteBar(x, y + 15, "A 隊", voteCounts.A, voteCounts.total, "#2ecc71");
+  drawVoteBar(x, y + 40, "B 隊", voteCounts.B, voteCounts.total, "#3498db");
+  drawVoteBar(x, y + 65, "C 隊", voteCounts.C, voteCounts.total, "#e74c3c");
+}
+
+function drawVoteDetailOverlay() {
+  push();
+  fill(0, 245); stroke("#f1c40f"); strokeWeight(2);
+  rect(width / 2, height / 2, 850, 750, 15); // 加寬視窗顯示三欄
+
+  noStroke(); fill("#f1c40f"); textSize(24); textStyle(BOLD); textAlign(CENTER);
+  text("🗳️ 預測名單分組 (點擊外側關閉)", width / 2, height / 2 - 340);
+
+  let colA = [], colB = [], colC = [];
+  allVotes.forEach(v => {
+    if (v.team === 'A') colA.push(v.id);
+    else if (v.team === 'B') colB.push(v.id);
+    else if (v.team === 'C') colC.push(v.id);
+  });
+
+  drawVoteColumn(width / 2 - 270, height / 2 - 280, "隊伍 A 支持者", colA, "#2ecc71");
+  drawVoteColumn(width / 2, height / 2 - 280, "隊伍 B 支持者", colB, "#3498db");
+  drawVoteColumn(width / 2 + 270, height / 2 - 280, "隊伍 C 支持者", colC, "#e74c3c");
+  pop();
+}
+
+function drawVoteColumn(x, y, title, list, clr) {
+  fill(clr); textSize(18); textAlign(CENTER); text(title, x, y);
+  fill(255); textSize(14); textStyle(NORMAL);
+  for (let i = 0; i < list.length && i < 28; i++) {
+    textAlign(CENTER);
+    text(list[i], x, y + 35 + (i * 22));
+  }
+}
+
+// --- 其餘原有函數 (略，請保留原本 sketch.js 的 drawPool, drawMatchSchedule 等) ---
 function drawPool(name, members, x, y, clr, score) {
   fill(clr); rect(x, y, 220, 45, 8); fill(0, 100); rect(x + 75, y, 55, 30, 5);
   fill(255); textAlign(LEFT, CENTER); textSize(18); textStyle(BOLD); text(name, x - 100, y);
@@ -153,50 +205,11 @@ function drawFinalBracket(x, y) {
   }
 }
 
-function drawLivePoll(x, y) {
-  fill(255, 5); rect(x, y, 280, 140, 15);
-  fill(255); textAlign(LEFT, CENTER); textSize(18); textStyle(BOLD); text("📊 預測比例", x - 120, y - 45);
-
-  // 「查看」按鈕
-  drawVirtualBtn(x + 95, y - 45, 55, 25, "查看", showVoteList, true);
-
-  let remain = 0;
-  if (voteActive && voteStartTime > 0) {
-    remain = Math.max(0, voteDuration - Math.floor((Date.now() - voteStartTime) / 1000));
-    if (remain <= 0) db.ref('settings/voteActive').set(false);
-  }
-  textSize(13); fill(remain > 0 ? "#f1c40f" : 150); textStyle(NORMAL);
-  text(remain > 0 ? `⏳ 剩餘: ${Math.floor(remain / 60)}分${remain % 60}秒` : "🛑 預測已截止", x - 120, y - 20);
-
-  drawVoteBar(x, y + 15, "A 隊", voteCounts.A, voteCounts.total, "#2ecc71");
-  drawVoteBar(x, y + 40, "B 隊", voteCounts.B, voteCounts.total, "#3498db");
-  drawVoteBar(x, y + 65, "C 隊", voteCounts.C, voteCounts.total, "#e74c3c");
-}
-
 function drawVoteBar(x, y, label, count, total, clr) {
   let maxW = 160; let w = total > 0 ? (count / total) * maxW : 0;
   fill(255, 20); noStroke(); rect(x + 30, y, maxW, 10, 5);
   fill(clr); rect(x + 30 - (maxW - w) / 2, y, w, 10, 5);
   fill(255); textSize(12); text(`${label}: ${count} 票`, x - 120, y + 2);
-}
-
-function drawVoteDetailOverlay() {
-  push();
-  fill(0, 240); stroke("#f1c40f"); strokeWeight(2);
-  rect(width / 2, height / 2, 450, 750, 15);
-  noStroke(); fill("#f1c40f"); textSize(24); textStyle(BOLD); textAlign(CENTER);
-  text("🗳️ 預測明細 (點擊外側關閉)", width / 2, height / 2 - 340);
-
-  textSize(15); textAlign(LEFT);
-  for (let i = 0; i < allVotes.length && i < 28; i++) {
-    let v = allVotes[i];
-    let ty = height / 2 - 300 + (i * 24);
-    let clr = v.team === 'A' ? "#2ecc71" : (v.team === 'B' ? "#3498db" : "#e74c3c");
-    fill(200); text(`${i + 1}. ${v.id}`, width / 2 - 180, ty);
-    fill(clr); text(`[${v.team} 隊贏]`, width / 2 + 80, ty);
-  }
-  if (allVotes.length > 28) { fill(150); text("... 僅顯示前 28 筆", width / 2 - 50, height / 2 + 350); }
-  pop();
 }
 
 function drawPrizePanel(x, y) {
@@ -267,12 +280,8 @@ function checkBo3Winner(mIdx, winIdx) {
 
 function mouseClicked() {
   if (isRolling) return;
-  // 如果明細開著，點擊任何地方關閉
   if (showVoteList) { showVoteList = false; return; }
-
-  // 點擊「查看」按鈕
-  if (dist(mouseX, mouseY, 820 + 95, 680 - 45) < 30) { showVoteList = true; return; }
-
+  if (dist(mouseX, mouseY, 820 + 100, 680 - 45) < 30) { showVoteList = true; return; }
   if (gamePhase === 3 && dist(mouseX, mouseY, width / 2, height - 60) < 60) { gamePhase = 2; return; }
   if (finalWinnerIdx !== -1 && dist(mouseX, mouseY, 820, 955) < 100) { gamePhase = 3; return; }
   if (gamePhase === 0 && dist(mouseX, mouseY, width / 2, height / 2) < 100) isRolling = true;
