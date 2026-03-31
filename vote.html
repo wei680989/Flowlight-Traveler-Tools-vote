@@ -70,7 +70,7 @@
     <h2>🏆 冠軍隊伍預測</h2>
     <div class="card">
         <div id="timer"></div>
-        <input type="text" id="playerID" placeholder="請輸入遊戲內 ID (必填)">
+        <input type="text" id="playerID" placeholder="請輸入您的遊戲 ID">
         <div id="voteArea">載入中...</div>
         <div id="status"></div>
     </div>
@@ -91,9 +91,8 @@
 
         let voteActive = false;
         let startTime = 0;
-        const duration = 600; // 10分鐘
+        const duration = 600;
 
-        // 監聽投票狀態
         db.ref('settings').on('value', (s) => {
             const data = s.val();
             if (data) {
@@ -117,7 +116,6 @@
             }
         }
 
-        // 每秒更新倒數計時
         setInterval(() => {
             if (voteActive && startTime > 0) {
                 let diff = Math.floor((Date.now() - startTime) / 1000);
@@ -136,8 +134,9 @@
             const id = document.getElementById('playerID').value.trim();
             if (!id) { alert("請輸入遊戲 ID 才能投票！"); return; }
 
+            // 使用 .set 會自動覆蓋同 ID 的舊數據
             db.ref('votes/' + id).set(team).then(() => {
-                document.getElementById('status').innerText = `✅ 已成功預測: ${team} 隊 (可重複修改)`;
+                document.getElementById('status').innerText = `✅ 已更新預測: ${team} 隊 (成功覆蓋)`;
             });
         }
     </script>
