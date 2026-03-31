@@ -89,20 +89,14 @@
 <body>
     <div class="container">
         <h2>🏆 賽事冠軍預測</h2>
-
-        <div class="reward-info">
-            ✨ <b>預測成功獎勵</b> ✨<br>
-            預測成功隊伍的玩家中，將使用 Google 輪盤<br>
-            隨機抽出一位幸運兒，獲得 <b>150 水晶任意商城獎品</b>！
+        <div class="reward-info">✨ <b>預測成功獎勵</b> ✨<br>預測成功隊伍的玩家中，將使用 Google 輪盤<br>隨機抽出一位幸運兒，獲得 <b>150 水晶任意商城獎品</b>！
         </div>
-
         <div class="team-box">
             <div id="timer">載入中...</div>
             <input type="text" id="playerID" placeholder="請輸入您的遊戲 ID">
             <div id="voteArea"></div>
             <div id="status" style="margin-top:10px; color:#2ecc71; font-weight:bold;"></div>
         </div>
-
         <div class="team-box" id="teamDisplay">
             <p style="color:#95a5a6; text-align:center;">⌛ 抽籤尚未開始，請稍候...</p>
         </div>
@@ -121,33 +115,21 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        let voteActive = false; let startTime = 0;
 
-        let voteActive = false;
-        let startTime = 0;
-
-        // 監聽投票狀態
         db.ref('settings').on('value', (s) => {
             const data = s.val();
-            if (data) {
-                voteActive = data.voteActive;
-                startTime = data.startTime;
-                updateUI();
-            }
+            if (data) { voteActive = data.voteActive; startTime = data.startTime; updateUI(); }
         });
 
-        // 動態監聽隊伍成員
         db.ref('currentTeams').on('value', (s) => {
             const t = s.val();
             const display = document.getElementById('teamDisplay');
             if (t) {
                 display.innerHTML = `
-                    <h4 style="color:#2ecc71">🟢 隊伍 A 成員</h4>
-                    <div class="team-list">${t.A.join('、')}</div>
-                    <h4 style="color:#3498db">🔵 隊伍 B 成員</h4>
-                    <div class="team-list">${t.B.join('、')}</div>
-                    <h4 style="color:#e74c3c">🔴 隊伍 C 成員</h4>
-                    <div class="team-list">${t.C.join('、')}</div>
-                `;
+                    <h4 style="color:#2ecc71">🟢 隊伍 A 成員</h4><div class="team-list">${t.A.join('、')}</div>
+                    <h4 style="color:#3498db">🔵 隊伍 B 成員</h4><div class="team-list">${t.B.join('、')}</div>
+                    <h4 style="color:#e74c3c">🔴 隊伍 C 成員</h4><div class="team-list">${t.C.join('、')}</div>`;
             }
         });
 
@@ -160,8 +142,7 @@
                 area.innerHTML = `
                     <button class="btn" style="background:#2ecc71" onclick="submitVote('A')">預測 A 隊奪冠</button>
                     <button class="btn" style="background:#3498db" onclick="submitVote('B')">預測 B 隊奪冠</button>
-                    <button class="btn" style="background:#e74c3c" onclick="submitVote('C')">預測 C 隊奪冠</button>
-                `;
+                    <button class="btn" style="background:#e74c3c" onclick="submitVote('C')">預測 C 隊奪冠</button>`;
             }
         }
 
@@ -177,7 +158,7 @@
             const id = document.getElementById('playerID').value.trim();
             if (!id) { alert("請輸入遊戲 ID！"); return; }
             db.ref('votes/' + id).set(team).then(() => {
-                document.getElementById('status').innerText = `✅ 預測更新成功: ${team} 隊！`;
+                document.getElementById('status').innerText = `✅ 預測成功: ${team} 隊！`;
             });
         }
     </script>

@@ -1,17 +1,8 @@
 /**
- * 【流光旅人】水晶衝突看板 V24 - 自動同步名單版
+ * 【流光旅人】水晶衝突看板 V26 - 最終整合版
  */
 
-// --- 1. 工具函數 ---
-function customShuffle(a) {
-  for (let i = a.length - 1; i > 0; i--) {
-    let j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-// --- 2. 變數設定 ---
+// --- 1. 基礎設定與名單 ---
 let playerNames = ["突擊兔邦妮", "Neil", "哈密瓜牛奶", "Soph1a", "西瓜牛奶", "鑢七椋", "奈莎", "吼哩拎醉", "一包黑芝麻", "戰鎖鎖不住", "無糖珍珠奶茶", "Usachi", "本", "楓紅", "武破子"];
 let shuffledList = [];
 let teams = [[], [], []];
@@ -97,6 +88,7 @@ function draw() {
   }
 }
 
+// --- 繪圖組件 ---
 function drawLivePoll(x, y) {
   fill(255, 5); rect(x, y, 280, 140, 15);
   fill(255); textAlign(LEFT, CENTER); textSize(18); textStyle(BOLD); text("📊 預測比例", x - 120, y - 45);
@@ -149,6 +141,27 @@ function drawVoteColumn(x, y, title, list, clr) {
   pop();
 }
 
+function drawPrizePanel(x, y) {
+  fill(255, 5); rect(x, y, 280, 160, 15);
+  fill(255); textAlign(LEFT); textSize(18); textStyle(BOLD); text("🎁 賽事獎項", x - 120, y - 55);
+  textSize(13); fill("#f1c40f"); text("🏆 第一名: 坐騎 720 (5人)", x - 120, y - 25);
+  fill("#bdc3c7"); text("🥈 第二名: 服飾 540 (5人)", x - 120, y + 5);
+  fill("#cd7f32"); text("🥉 第三名: 寵物 150 (5人)", x - 120, y + 35);
+  if (finalWinnerIdx !== -1) drawVirtualBtn(x, y + 55, 200, 35, "🏆 查看大會結算", true, true);
+}
+
+function drawVictoryScreen() {
+  push(); background(10, 15, 25, 250); textAlign(CENTER, CENTER);
+  let tN = ["隊伍 A", "隊伍 B", "隊伍 C"], rU = finalTeams.find(t => t !== finalWinnerIdx), th = [0, 1, 2].find(t => !finalTeams.includes(t));
+  fill("#f1c40f"); textSize(45); textStyle(BOLD); text("🏆 賽事榮耀結算 🏆", width / 2, 60);
+  drawRankBox(width / 2, 260, "🥇 冠軍隊伍", tN[finalWinnerIdx], finalWinnerIdx, "#f1c40f", "坐騎 720", true);
+  drawRankBox(width / 2 - 260, 600, "🥈 亞軍隊伍", tN[rU], rU, "#bdc3c7", "服飾 540", false);
+  drawRankBox(width / 2 + 260, 600, "🥉 季軍隊伍", tN[th], th, "#cd7f32", "寵物 150", false);
+  fill(255, 180); textSize(18); textStyle(BOLD); text("✨ 特別感謝贊助：罐裝五穀米 ✨", width / 2, height - 130);
+  fill(60); rect(width / 2, height - 60, 180, 40, 8); fill(255); text("返回看板", width / 2, height - 60);
+  pop();
+}
+
 function drawRollingOverlay() {
   fill(0, 230); rect(width / 2, height / 2, width, height);
   fill(255); textSize(40); textStyle(BOLD); textAlign(CENTER); text("名單抽選中...", width / 2, height / 2 - 40);
@@ -162,13 +175,15 @@ function drawRollingOverlay() {
       if (db) {
         db.ref('votes').set(null);
         db.ref('settings').set({ voteActive: true, startTime: Date.now() });
-        db.ref('currentTeams').set({ A: teams[0], B: teams[1], C: teams[2] }); // 同步名單
+        db.ref('currentTeams').set({ A: teams[0], B: teams[1], C: teams[2] });
       }
     }
   }
 }
 
-// --- 其餘功能模組 ---
+// --- 邏輯函數 ---
+function customShuffle(a) { for (let i = a.length - 1; i > 0; i--) { let j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; } return a; }
+
 function drawPool(n, m, x, y, c, s) {
   fill(c); rect(x, y, 220, 45, 8); fill(0, 100); rect(x + 75, y, 55, 30, 5);
   fill(255); textAlign(LEFT, CENTER); textSize(18); textStyle(BOLD); text(n, x - 100, y);
@@ -203,39 +218,13 @@ function drawFinalBracket(x, y) {
   fill(255); textSize(14); text("VS", x, 215);
   drawVirtualBtn(x + 80, 215, 80, 35, tN[finalTeams[1]], true, true);
   for (let i = 0; i < 3; i++) {
-    let ty = 295 + (i * 105), hasS = finalMatches[i].score !== "", bE = hasS;
+    let ty = 295 + (i * 105), hasS = finalMatches[i].score !== "";
     fill(255, 5); rect(x, ty + 30, 250, 90, 10);
-    drawVirtualBtn(x - 80, ty + 30, 60, 30, "WIN", finalMatches[i].winner === 0, bE);
-    drawVirtualBtn(x + 80, ty + 30, 60, 30, "WIN", finalMatches[i].winner === 1, bE);
+    drawVirtualBtn(x - 80, ty + 30, 60, 30, "WIN", finalMatches[i].winner === 0, hasS);
+    drawVirtualBtn(x + 80, ty + 30, 60, 30, "WIN", finalMatches[i].winner === 1, hasS);
     fill(activeInput.type === 'final' && activeInput.index === i ? "#f1c40f" : 100);
     text(finalMatches[i].score === "" ? "填寫比分" : finalMatches[i].score, x, ty + 65);
   }
-}
-
-function drawVoteBar(x, y, l, c, t, cl) {
-  let mw = 160, w = t > 0 ? (c / t) * mw : 0;
-  fill(255, 20); rect(x + 30, y, mw, 10, 5);
-  fill(cl); rect(x + 30 - (mw - w) / 2, y, w, 10, 5);
-  fill(255); textSize(12); text(`${l}: ${c} 票`, x - 120, y + 2);
-}
-
-function drawPrizePanel(x, y) {
-  fill(255, 5); rect(x, y, 280, 160, 15);
-  fill(255); textAlign(LEFT); textSize(18); textStyle(BOLD); text("🎁 賽事獎項", x - 120, y - 55);
-  textSize(13); fill("#f1c40f"); text("🏆 第一名: 坐騎 720 (5人)", x - 120, y - 25);
-  fill("#bdc3c7"); text("🥈 第二名: 服飾 540 (5人)", x - 120, y + 5);
-  fill("#cd7f32"); text("🥉 第三名: 寵物 150 (5人)", x - 120, y + 35);
-}
-
-function drawVictoryScreen() {
-  push(); background(10, 15, 25, 250); textAlign(CENTER, CENTER);
-  let tN = ["隊伍 A", "隊伍 B", "隊伍 C"], rU = finalTeams.find(t => t !== finalWinnerIdx), th = [0, 1, 2].find(t => !finalTeams.includes(t));
-  fill("#f1c40f"); textSize(45); textStyle(BOLD); text("🏆 賽事榮耀結算 🏆", width / 2, 60);
-  drawRankBox(width / 2, 260, "🥇 冠軍隊伍", tN[finalWinnerIdx], finalWinnerIdx, "#f1c40f", "坐騎 720", true);
-  drawRankBox(width / 2 - 260, 600, "🥈 亞軍隊伍", tN[rU], rU, "#bdc3c7", "服飾 540", false);
-  drawRankBox(width / 2 + 260, 600, "🥉 季軍隊伍", tN[th], th, "#cd7f32", "寵物 150", false);
-  fill(60); rect(width / 2, height - 60, 180, 40, 8); fill(255); text("返回看板", width / 2, height - 60);
-  pop();
 }
 
 function drawRankBox(x, y, r, n, i, c, p, w) {
@@ -243,6 +232,13 @@ function drawRankBox(x, y, r, n, i, c, p, w) {
   fill(c); textSize(w ? 32 : 24); textStyle(BOLD); text(r + " - " + n, x, y - (w ? 130 : 80));
   fill(255); textSize(15); textStyle(NORMAL); text("獎品：" + p, x, y - (w ? 100 : 55));
   fill(200); text(teams[i].join(" 、 "), x, y - (w ? 75 : 30), w ? 500 : 360, 50);
+}
+
+function drawVoteBar(x, y, l, c, t, cl) {
+  let mw = 160, w = t > 0 ? (c / t) * mw : 0;
+  fill(255, 20); rect(x + 30, y, mw, 10, 5);
+  fill(cl); rect(x + 30 - (mw - w) / 2, y, w, 10, 5);
+  fill(255); textSize(12); text(`${l}: ${c} 票`, x - 120, y + 2);
 }
 
 function setWinner(mIdx, tIdx) {
@@ -267,7 +263,7 @@ function mouseClicked() {
   if (showVoteList) { showVoteList = false; return; }
   if (dist(mouseX, mouseY, 820 + 100, 680 - 45) < 30) { showVoteList = true; return; }
   if (gamePhase === 3 && dist(mouseX, mouseY, width / 2, height - 60) < 60) { gamePhase = 2; return; }
-  if (finalWinnerIdx !== -1 && dist(mouseX, mouseY, 820, 955) < 100) { gamePhase = 3; return; }
+  if (finalWinnerIdx !== -1 && dist(mouseX, mouseY, 820, 900) < 100) { gamePhase = 3; return; }
   if (gamePhase === 0 && dist(mouseX, mouseY, width / 2, height / 2) < 100) isRolling = true;
   if (gamePhase === 1) {
     for (let i = 0; i < 6; i++) {
